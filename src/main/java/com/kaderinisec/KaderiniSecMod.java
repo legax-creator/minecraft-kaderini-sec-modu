@@ -6,8 +6,7 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
-import net.minecraft.world.entity.player.Player;
-import net.minecraftforge.fml.DistExecutor;
+import net.minecraft.client.Minecraft;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -16,7 +15,7 @@ import java.util.Random;
 public class KaderiniSecMod {
 
     private int tickSayaci = 0;
-    private int hedefTick = 200; // Test için 10 saniye
+    private int hedeftick = 200; // İlk ekran için 10 saniye
     private Random random = new Random();
 
     private List<Ozellikler.Ozellik> kullanilmisAvantajlar = new ArrayList<>();
@@ -32,21 +31,28 @@ public class KaderiniSecMod {
     private void setup(final FMLCommonSetupEvent event) {
     }
 
+    // 🖥️ Zamanlayıcı artık tamamen İSTEMCİ (Client) tarafında çalışıyor!
     @SubscribeEvent
-    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        // Zamanlayıcı sunucuda güvenle sayıyor
-        if (event.phase == TickEvent.Phase.END && !event.player.level().isClientSide) {
-            tickSayaci++;
+    public void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            Minecraft mc = Minecraft.getInstance();
+            
+            // Oyuncu dünyadaysa ve şu an ekranda açık başka hiçbir menü (envanter vs.) yoksa saysın
+            if (mc.player != null && mc.level != null && mc.screen == null) {
+                tickSayaci++;
 
-            if (tickSayaci >= hedefTick) {
-                tickSayaci = 0;
-                hedefTick = random.nextInt(200) + 200; 
-                secimEkraniniTetikle(event.player);
+                if (tickSayaci >= hedeftick) {
+                    tickSayaci = 0;
+                    // Bir sonraki ekranlar için 10-20 saniye arası rastgele süre
+                    hedeftick = random.nextInt(200) + 200; 
+                    
+                    secimEkraniniTetikle();
+                }
             }
         }
     }
 
-    private void secimEkraniniTetikle(Player oyuncu) {
+    private void secimEkraniniTetikle() {
         if (Ozellikler.AVANTAJLAR.isEmpty() || Ozellikler.DEZAVANTAJLAR.isEmpty()) return;
 
         if (kullanilmisAvantajlar.size() >= Ozellikler.AVANTAJLAR.size()) {
@@ -73,11 +79,10 @@ public class KaderiniSecMod {
         final Ozellikler.Ozellik finalBAv = bAv;
         final Ozellikler.Ozellik finalBDez = bDez;
 
-        // 🛡️ İŞTE EKSİK OLAN RESMİ KÖPRÜ: 
-        // Forge'a bu kodun sadece İstemci (Client) tarafında güvenle çalıştırılacağını zorla dikte ediyoruz.
-        DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT, () -> () -> {
-            ClientProxy.ekraniGoster(this, finalAAv, finalADez, finalBAv, finalBDez);
-        });
+        // Tamamen istemci tarafında olduğumuz için doğrudan ve güvenle ekranı açıyoruz
+        Minecraft.getInstance().setScreen(
+            new SecimEkrani(this, finalAAv, finalADez, finalBAv, finalBDez)
+        );
     }
 
     public void kartiKullanVeSil(Ozellikler.Ozellik avantaj, Ozellikler.Ozellik dezavantaj) {
