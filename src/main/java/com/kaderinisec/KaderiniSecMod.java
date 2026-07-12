@@ -2,11 +2,13 @@ package com.kaderinisec;
 
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
+import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.commands.Commands;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -15,10 +17,9 @@ import java.util.Random;
 public class KaderiniSecMod {
 
     private int tickSayaci = 0;
-    private int hedefTick = 3600; 
+    private int hedefTick = 200; // Test için 10 saniye
     private Random random = new Random();
 
-    // 🧠 Daha önce seçilmiş olan özellikleri aklında tutan hafıza listeleri
     private List<Ozellikler.Ozellik> kullanilmisAvantajlar = new ArrayList<>();
     private List<Ozellikler.Ozellik> kullanilmisDezavantajlar = new ArrayList<>();
 
@@ -32,16 +33,33 @@ public class KaderiniSecMod {
     private void setup(final FMLCommonSetupEvent event) {
     }
 
+    // ⌨️ Yeni Eklenen Komut Kayıt Motoru
+    @SubscribeEvent
+    public void onRegisterCommands(RegisterCommandsEvent event) {
+        event.getDispatcher().register(
+            Commands.literal("kaderinisec").executes(context -> {
+                // Komut sunucuda çalışır, bu yüzden istemciye (Client) güvenli sinyal yolluyoruz
+                net.minecraft.client.Minecraft.getInstance().execute(() -> {
+                    Player oyuncu = net.minecraft.client.Minecraft.getInstance().player;
+                    if (oyuncu != null) {
+                        secimEkraniniTetikle(oyuncu);
+                    }
+                });
+                return 1;
+            })
+        );
+    }
+
     @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase == TickEvent.Phase.END && !event.player.level().isClientSide) {
-            Player oyuncu = event.player;
+        // İstemci tarafında ve sadece ana oyuncu için tetikleme yapıyoruz
+        if (event.phase == TickEvent.Phase.END && event.player.level().isClientSide && event.player == net.minecraft.client.Minecraft.getInstance().player) {
             tickSayaci++;
 
             if (tickSayaci >= hedefTick) {
                 tickSayaci = 0;
-                hedefTick = random.nextInt(2400) + 1200; 
-                secimEkraniniTetikle(oyuncu);
+                hedefTick = random.nextInt(200) + 200; 
+                secimEkraniniTetikle(event.player);
             }
         }
     }
@@ -49,25 +67,18 @@ public class KaderiniSecMod {
     private void secimEkraniniTetikle(Player oyuncu) {
         if (Ozellikler.AVANTAJLAR.isEmpty() || Ozellikler.DEZAVANTAJLAR.isEmpty()) return;
 
-        // 🧠 Eğer tüm kartlar kullanıldıysa hafızayı sıfırla (Döngü başa sarsın)
         if (kullanilmisAvantajlar.size() >= Ozellikler.AVANTAJLAR.size()) {
             kullanilmisAvantajlar.clear();
-            oyuncu.sendSystemMessage(net.minecraft.network.chat.Component.literal("§6[Kaderini Seç] §bTüm avantajlar tükendi! Havuz yenileniyor..."));
         }
         if (kullanilmisDezavantajlar.size() >= Ozellikler.DEZAVANTAJLAR.size()) {
             kullanilmisDezavantajlar.clear();
-            oyuncu.sendSystemMessage(net.minecraft.network.chat.Component.literal("§6[Kaderini Seç] §bTüm dezavantajlar tükendi! Havuz yenileniyor..."));
         }
 
-        // SEÇENEK A İÇİN DAHA ÖNCE ÇIKMAMIŞ KARTLARI SEÇİYORUZ
         Ozellikler.Ozellik aAv = benzersizRastgeleSec(Ozellikler.AVANTAJLAR, kullanilmisAvantajlar);
         Ozellikler.Ozellik aDez = benzersizRastgeleSec(Ozellikler.DEZAVANTAJLAR, kullanilmisDezavantajlar);
-
-        // SEÇENEK B İÇİN DAHA ÖNCE ÇIKMAMIŞ KARTLARI SEÇİYORUZ
         Ozellikler.Ozellik bAv = benzersizRastgeleSec(Ozellikler.AVANTAJLAR, kullanilmisAvantajlar);
         Ozellikler.Ozellik bDez = benzersizRastgeleSec(Ozellikler.DEZAVANTAJLAR, kullanilmisDezavantajlar);
 
-        // Aynı ekranda iki butonun da birebir aynı gelmesini engelleme kontrolü
         while (bAv == aAv && bAv != SURPRIZ_KUTUSU) {
             bAv = benzersizRastgeleSec(Ozellikler.AVANTAJLAR, kullanilmisAvantajlar);
         }
@@ -80,7 +91,7 @@ public class KaderiniSecMod {
         final Ozellikler.Ozellik finalBAv = bAv;
         final Ozellikler.Ozellik finalBDez = bDez;
 
-        // Hata veren kısım düzeltildi: 'this' (yani bu sınıf) ilk parametre olarak eklendi!
+        // 🧠 EKRAN AÇMA GÜVENLİK DUVARI AŞILDI: İşlemi Render Thread'e senkronize ediyoruz
         net.minecraft.client.Minecraft.getInstance().execute(() -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
                 new SecimEkrani(this, finalAAv, finalADez, finalBAv, finalBDez)
@@ -88,7 +99,6 @@ public class KaderiniSecMod {
         });
     }
 
-    // 🔍 SecimEkrani'ndan çağrılan ve eksik olan o meşhur metot eklendi!
     public void kartiKullanVeSil(Ozellikler.Ozellik avantaj, Ozellikler.Ozellik dezavantaj) {
         if (avantaj != SURPRIZ_KUTUSU && !kullanilmisAvantajlar.contains(avantaj)) {
             kullanilmisAvantajlar.add(avantaj);
@@ -98,7 +108,6 @@ public class KaderiniSecMod {
         }
     }
 
-    // 🔍 Sadece daha önce seçilmemiş kartları bulan akıllı zar motoru
     private Ozellikler.Ozellik benzersizRastgeleSec(List<Ozellikler.Ozellik> anaListe, List<Ozellikler.Ozellik> kullanilmisListe) {
         int sans = random.nextInt(anaListe.size() + 1);
         if (sans == anaListe.size()) {
