@@ -7,6 +7,8 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraft.world.entity.player.Player;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Random;
 
 @Mod("kaderinisec")
@@ -16,7 +18,10 @@ public class KaderiniSecMod {
     private int hedefTick = 3600; 
     private Random random = new Random();
 
-    // Sürpriz kutusunu temsil eden hayali bir 51. özel madde
+    // 🧠 Daha önce seçilmiş olan özellikleri aklında tutan hafıza listeleri
+    private List<Ozellikler.Ozellik> kullanilmisAvantajlar = new ArrayList<>();
+    private List<Ozellikler.Ozellik> kullanilmisDezavantajlar = new ArrayList<>();
+
     public static final Ozellikler.Ozellik SURPRIZ_KUTUSU = new Ozellikler.Ozellik("?? SÜRPRİZ ??", "Tıklayana kadar gizli!", "surpriz");
 
     public KaderiniSecMod() {
@@ -44,20 +49,30 @@ public class KaderiniSecMod {
     private void secimEkraniniTetikle(Player oyuncu) {
         if (Ozellikler.AVANTAJLAR.isEmpty() || Ozellikler.DEZAVANTAJLAR.isEmpty()) return;
 
-        // SEÇENEK A İÇİN ZAR ATIYORUZ (51 seçenek arasından)
-        Ozellikler.Ozellik aAv = rastgeleSec(Ozellikler.AVANTAJLAR);
-        Ozellikler.Ozellik aDez = rastgeleSec(Ozellikler.DEZAVANTAJLAR);
+        // 🧠 Eğer tüm kartlar kullanıldıysa hafızayı sıfırla (Döngü başa sarsın)
+        if (kullanilmisAvantajlar.size() >= Ozellikler.AVANTAJLAR.size()) {
+            kullanilmisAvantajlar.clear();
+            oyuncu.sendSystemMessage(net.minecraft.network.chat.Component.literal("§6[Kaderini Seç] §bTüm avantajlar tükendi! Havuz yenileniyor..."));
+        }
+        if (kullanilmisDezavantajlar.size() >= Ozellikler.DEZAVANTAJLAR.size()) {
+            kullanilmisDezavantajlar.clear();
+            oyuncu.sendSystemMessage(net.minecraft.network.chat.Component.literal("§6[Kaderini Seç] §bTüm dezavantajlar tükendi! Havuz yenileniyor..."));
+        }
 
-        // SEÇENEK B İÇİN ZAR ATIYORUZ
-        Ozellikler.Ozellik bAv = rastgeleSec(Ozellikler.AVANTAJLAR);
-        Ozellikler.Ozellik bDez = rastgeleSec(Ozellikler.DEZAVANTAJLAR);
+        // SEÇENEK A İÇİN DAHA ÖNCE ÇIKMAMIŞ KARTLARI SEÇİYORUZ
+        Ozellikler.Ozellik aAv = benzersizRastgeleSec(Ozellikler.AVANTAJLAR, kullanilmisAvantajlar);
+        Ozellikler.Ozellik aDez = benzersizRastgeleSec(Ozellikler.DEZAVANTAJLAR, kullanilmisDezavantajlar);
 
-        // Seçeneklerin birebir aynı gelmesini engelleme kontrolü
+        // SEÇENEK B İÇİN DAHA ÖNCE ÇIKMAMIŞ KARTLARI SEÇİYORUZ
+        Ozellikler.Ozellik bAv = benzersizRastgeleSec(Ozellikler.AVANTAJLAR, kullanilmisAvantajlar);
+        Ozellikler.Ozellik bDez = benzersizRastgeleSec(Ozellikler.DEZAVANTAJLAR, kullanilmisDezavantajlar);
+
+        // Aynı ekranda iki butonun da birebir aynı gelmesini engelleme kontrolü
         while (bAv == aAv && bAv != SURPRIZ_KUTUSU) {
-            bAv = rastgeleSec(Ozellikler.AVANTAJLAR);
+            bAv = benzersizRastgeleSec(Ozellikler.AVANTAJLAR, kullanilmisAvantajlar);
         }
         while (bDez == aDez && bDez != SURPRIZ_KUTUSU) {
-            bDez = rastgeleSec(Ozellikler.DEZAVANTAJLAR);
+            bDez = benzersizRastgeleSec(Ozellikler.DEZAVANTAJLAR, kullanilmisDezavantajlar);
         }
 
         final Ozellikler.Ozellik finalAAv = aAv;
@@ -65,20 +80,30 @@ public class KaderiniSecMod {
         final Ozellikler.Ozellik finalBAv = bAv;
         final Ozellikler.Ozellik finalBDez = bDez;
 
+        // Oyuncu hangi kartı seçerse onu hafızaya eklemek için listeleri ekran sınıfına paslayacağız
         net.minecraft.client.Minecraft.getInstance().execute(() -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
-                new SecimEkrani(finalAAv, finalADez, finalBAv, finalBDez)
+                new SecimEkrani(finalAAv, finalADez, finalBAv, finalBDez, kullanilmisAvantajlar, kullanilmisDezavantajlar)
             );
         });
     }
 
-    // Listeden bir özellik seçer veya 51. ihtimal olarak Sürpriz Kutusu döndürür
-    private Ozellikler.Ozellik rastgeleSec(java.util.List<Ozellikler.Ozellik> liste) {
-        // Toplam liste boyutu + 1 (Sürpriz kutusu için 51. slot)
-        int sans = random.nextInt(liste.size() + 1);
-        if (sans == liste.size()) {
-            return SURPRIZ_KUTUSU; // %2 ihtimalle sürpriz kutusu denk geldi!
+    // 🔍 Sadece daha önce seçilmemiş kartları bulan akıllı zar motoru
+    private Ozellikler.Ozellik benzersizRastgeleSec(List<Ozellikler.Ozellik> anaListe, List<Ozellikler.Ozellik> kullanilmisListe) {
+        int sans = random.nextInt(anaListe.size() + 1);
+        if (sans == anaListe.size()) {
+            return SURPRIZ_KUTUSU; // 51. İhtimal: Sürpriz kutusu her zaman gelebilir
         }
-        return liste.get(sans);
+
+        Ozellikler.Ozellik secilen = anaListe.get(sans);
+        
+        // Eğer bu kart daha önce kullanıldıysa, kullanılmamış bir tane bulana kadar tekrar zar at
+        int denemeSayisi = 0;
+        while (kullanilmisListe.contains(secilen) && denemeSayisi < 100) {
+            secilen = anaListe.get(random.nextInt(anaListe.size()));
+            denemeSayisi++;
+        }
+        
+        return secilen;
     }
 }
