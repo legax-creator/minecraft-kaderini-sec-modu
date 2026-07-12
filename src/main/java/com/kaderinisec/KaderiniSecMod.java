@@ -6,45 +6,52 @@ import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraft.world.entity.player.Player;
 import net.minecraft.client.Minecraft;
+import net.minecraftforge.api.distmarker.Dist;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
 
 @Mod("kaderinisec")
+// 🛡️ Forge'a bu sınıfın içindeki etkinlikleri otomatik ve zorunlu olarak kaydetmesini söylüyoruz (Sadece İstemcide)
+@Mod.EventBusSubscriber(modid = "kaderinisec", value = Dist.CLIENT)
 public class KaderiniSecMod {
 
-    private int tickSayaci = 0;
-    private int hedeftick = 200; // İlk ekran için 10 saniye
-    private Random random = new Random();
+    // Forge'un otomatik okuyabilmesi için zamanlayıcı bileşenlerini statik yapıyoruz
+    private static int tickSayaci = 0;
+    private static int hedeftick = 200; // İlk ekran 10 saniye
+    private static final Random random = new Random();
 
-    private List<Ozellikler.Ozellik> kullanilmisAvantajlar = new ArrayList<>();
-    private List<Ozellikler.Ozellik> kullanilmisDezavantajlar = new ArrayList<>();
+    private static final List<Ozellikler.Ozellik> kullanilmisAvantajlar = new ArrayList<>();
+    private static final List<Ozellikler.Ozellik> kullanilmisDezavantajlar = new ArrayList<>();
 
     public static final Ozellikler.Ozellik SURPRIZ_KUTUSU = new Ozellikler.Ozellik("?? SÜRPRİZ ??", "Tıklayana kadar gizli!", "surpriz");
 
+    // Tek bir statik örnek (SecimEkrani'na göndermek için)
+    private static KaderiniSecMod instance;
+
     public KaderiniSecMod() {
+        instance = this;
         FMLJavaModLoadingContext.get().getModEventBus().addListener(this::setup);
-        MinecraftForge.EVENT_BUS.register(this);
     }
 
     private void setup(final FMLCommonSetupEvent event) {
     }
 
-    // 🖥️ Zamanlayıcı artık tamamen İSTEMCİ (Client) tarafında çalışıyor!
+    // 🖥️ Statik hale getirilmiş istemci zamanlayıcısı - Forge bunu asla görmezden gelemez
     @SubscribeEvent
-    public void onClientTick(TickEvent.ClientTickEvent event) {
+    public static void onClientTick(TickEvent.ClientTickEvent event) {
         if (event.phase == TickEvent.Phase.END) {
             Minecraft mc = Minecraft.getInstance();
             
-            // Oyuncu dünyadaysa ve şu an ekranda açık başka hiçbir menü (envanter vs.) yoksa saysın
+            // Oyuncu dünyadaysa ve ekranda başka menü açık değilse say
             if (mc.player != null && mc.level != null && mc.screen == null) {
                 tickSayaci++;
 
                 if (tickSayaci >= hedeftick) {
                     tickSayaci = 0;
-                    // Bir sonraki ekranlar için 10-20 saniye arası rastgele süre
-                    hedeftick = random.nextInt(200) + 200; 
+                    hedeftick = random.nextInt(200) + 200; // Sonraki ekranlar 10-20 sn arası
                     
                     secimEkraniniTetikle();
                 }
@@ -52,7 +59,7 @@ public class KaderiniSecMod {
         }
     }
 
-    private void secimEkraniniTetikle() {
+    private static void secimEkraniniTetikle() {
         if (Ozellikler.AVANTAJLAR.isEmpty() || Ozellikler.DEZAVANTAJLAR.isEmpty()) return;
 
         if (kullanilmisAvantajlar.size() >= Ozellikler.AVANTAJLAR.size()) {
@@ -79,9 +86,9 @@ public class KaderiniSecMod {
         final Ozellikler.Ozellik finalBAv = bAv;
         final Ozellikler.Ozellik finalBDez = bDez;
 
-        // Tamamen istemci tarafında olduğumuz için doğrudan ve güvenle ekranı açıyoruz
+        // Doğrudan ve güvenle ekranı aç
         Minecraft.getInstance().setScreen(
-            new SecimEkrani(this, finalAAv, finalADez, finalBAv, finalBDez)
+            new SecimEkrani(instance, finalAAv, finalADez, finalBAv, finalBDez)
         );
     }
 
@@ -94,7 +101,7 @@ public class KaderiniSecMod {
         }
     }
 
-    private Ozellikler.Ozellik benzersizRastgeleSec(List<Ozellikler.Ozellik> anaListe, List<Ozellikler.Ozellik> kullanilmisListe) {
+    private static Ozellikler.Ozellik benzersizRastgeleSec(List<Ozellikler.Ozellik> anaListe, List<Ozellikler.Ozellik> kullanilmisListe) {
         int sans = random.nextInt(anaListe.size() + 1);
         if (sans == anaListe.size()) {
             return SURPRIZ_KUTUSU;
