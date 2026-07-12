@@ -105,8 +105,10 @@ public class SecimEkrani extends Screen {
             sonDez = Ozellikler.DEZAVANTAJLAR.get(random.nextInt(Ozellikler.DEZAVANTAJLAR.size()));
         }
 
-        // Seçilen kartları ana beyindeki "kalanlar" listesinden sildiriyoruz!
-        modAnaBeyin.kartiKullanVeSil(sonAv, sonDez);
+        // Seçilen kartları ana beyindeki listeye ekleyerek hafızaya alıyoruz
+        if (modAnaBeyin != null) {
+            modAnaBeyin.kartiKullanVeSil(sonAv, sonDez);
+        }
 
         oyuncu.removeAllEffects();
 
