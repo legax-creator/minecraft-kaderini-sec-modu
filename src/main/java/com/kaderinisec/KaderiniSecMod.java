@@ -2,14 +2,12 @@ package com.kaderinisec;
 
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
-import net.minecraftforge.event.RegisterCommandsEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.commands.Commands;
-import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.client.Minecraft;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -18,7 +16,7 @@ import java.util.Random;
 public class KaderiniSecMod {
 
     private int tickSayaci = 0;
-    private int hedefTick = 200; // Test için 10 saniye (20 tick = 1 saniye)
+    private int hedefTick = 200; // 10 saniye (Test amaçlı)
     private Random random = new Random();
 
     private List<Ozellikler.Ozellik> kullanilmisAvantajlar = new ArrayList<>();
@@ -34,31 +32,22 @@ public class KaderiniSecMod {
     private void setup(final FMLCommonSetupEvent event) {
     }
 
-    // ⌨️ Komut artık Sunucu (Server) tarafında güvenle dinleniyor
+    // 🖥️ Sadece ve sadece İstemci (Client) tarafındaki oyuncunun dünyasını dinliyoruz
     @SubscribeEvent
-    public void onRegisterCommands(RegisterCommandsEvent event) {
-        event.getDispatcher().register(
-            Commands.literal("kaderinisec").executes(context -> {
-                if (context.getSource().getEntity() instanceof Player oyuncu) {
-                    // Mantıksal motoru ana iş parçacığına senkronize ediyoruz
-                    net.minecraftforge.fml.util.thread.EffectiveSide.get().isClient();
-                    secimEkraniniTetikle(oyuncu);
+    public void onClientTick(TickEvent.ClientTickEvent event) {
+        if (event.phase == TickEvent.Phase.END) {
+            Minecraft mc = Minecraft.getInstance();
+            // Oyuncu dünyada mı ve şu an açık bir arayüz/ekran yok mu kontrolü
+            if (mc.player != null && mc.level != null && mc.screen == null) {
+                tickSayaci++;
+
+                if (tickSayaci >= hedefTick) {
+                    tickSayaci = 0;
+                    hedefTick = random.nextInt(200) + 200; // Bir sonraki ekran 10-20 sn arası
+                    
+                    // Doğrudan render thread üzerinde ekranı tetikle
+                    secimEkraniniTetikle(mc.player);
                 }
-                return 1;
-            })
-        );
-    }
-
-    // ⏱️ Zamanlayıcı artık SUNUCU (Server) tarafında güvenle sayıyor! Böylece singleplayer'da asla takılmayacak
-    @SubscribeEvent
-    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
-        if (event.phase == TickEvent.Phase.END && !event.player.level().isClientSide) {
-            tickSayaci++;
-
-            if (tickSayaci >= hedefTick) {
-                tickSayaci = 0;
-                hedefTick = random.nextInt(200) + 200; 
-                secimEkraniniTetikle(event.player);
             }
         }
     }
@@ -90,28 +79,10 @@ public class KaderiniSecMod {
         final Ozellikler.Ozellik finalBAv = bAv;
         final Ozellikler.Ozellik finalBDez = bDez;
 
-        // 🛡️ SUNUCUDAN İSTEMCİYE GÜVENLİ KÖPRÜ
-        // Oyun singleplayer bile olsa ekranı sadece kullanıcının kendi ekran kartı (Render Thread) çizebilir
-        if (oyuncu.level().isClientSide) {
-            net.minecraft.client.Minecraft.getInstance().execute(() -> {
-                net.minecraft.client.Minecraft.getInstance().setScreen(
-                    new SecimEkrani(this, finalAAv, finalADez, finalBAv, finalBDez)
-                );
-            });
-        } else {
-            // Eğer kod sunucu tarafındaysa, istemci thread'ine dolaylı yoldan erişim sağlıyoruz
-            java.awt.EventQueue.invokeLater(() -> {
-                try {
-                    net.minecraft.client.Minecraft.getInstance().execute(() -> {
-                        net.minecraft.client.Minecraft.getInstance().setScreen(
-                            new SecimEkrani(this, finalAAv, finalADez, finalBAv, finalBDez)
-                        );
-                    });
-                } catch (Throwable t) {
-                    // Sunucu ortamında GUI çökmesini engellemek için koruma kalkanı
-                }
-            });
-        }
+        // İstemci döngüsünde olduğumuz için doğrudan setScreen çağırabiliyoruz
+        Minecraft.getInstance().setScreen(
+            new SecimEkrani(this, finalAAv, finalADez, finalBAv, finalBDez)
+        );
     }
 
     public void kartiKullanVeSil(Ozellikler.Ozellik avantaj, Ozellikler.Ozellik dezavantaj) {
