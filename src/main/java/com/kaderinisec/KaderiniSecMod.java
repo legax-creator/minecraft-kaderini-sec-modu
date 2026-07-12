@@ -80,24 +80,33 @@ public class KaderiniSecMod {
         final Ozellikler.Ozellik finalBAv = bAv;
         final Ozellikler.Ozellik finalBDez = bDez;
 
-        // Oyuncu hangi kartı seçerse onu hafızaya eklemek için listeleri ekran sınıfına paslayacağız
+        // Hata veren kısım düzeltildi: 'this' (yani bu sınıf) ilk parametre olarak eklendi!
         net.minecraft.client.Minecraft.getInstance().execute(() -> {
             net.minecraft.client.Minecraft.getInstance().setScreen(
-                new SecimEkrani(finalAAv, finalADez, finalBAv, finalBDez, kullanilmisAvantajlar, kullanilmisDezavantajlar)
+                new SecimEkrani(this, finalAAv, finalADez, finalBAv, finalBDez)
             );
         });
+    }
+
+    // 🔍 SecimEkrani'ndan çağrılan ve eksik olan o meşhur metot eklendi!
+    public void kartiKullanVeSil(Ozellikler.Ozellik avantaj, Ozellikler.Ozellik dezavantaj) {
+        if (avantaj != SURPRIZ_KUTUSU && !kullanilmisAvantajlar.contains(avantaj)) {
+            kullanilmisAvantajlar.add(avantaj);
+        }
+        if (dezavantaj != SURPRIZ_KUTUSU && !kullanilmisDezavantajlar.contains(dezavantaj)) {
+            kullanilmisDezavantajlar.add(dezavantaj);
+        }
     }
 
     // 🔍 Sadece daha önce seçilmemiş kartları bulan akıllı zar motoru
     private Ozellikler.Ozellik benzersizRastgeleSec(List<Ozellikler.Ozellik> anaListe, List<Ozellikler.Ozellik> kullanilmisListe) {
         int sans = random.nextInt(anaListe.size() + 1);
         if (sans == anaListe.size()) {
-            return SURPRIZ_KUTUSU; // 51. İhtimal: Sürpriz kutusu her zaman gelebilir
+            return SURPRIZ_KUTUSU;
         }
 
         Ozellikler.Ozellik secilen = anaListe.get(sans);
         
-        // Eğer bu kart daha önce kullanıldıysa, kullanılmamış bir tane bulana kadar tekrar zar at
         int denemeSayisi = 0;
         while (kullanilmisListe.contains(secilen) && denemeSayisi < 100) {
             secilen = anaListe.get(random.nextInt(anaListe.size()));
