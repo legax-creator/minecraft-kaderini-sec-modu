@@ -12,14 +12,16 @@ import java.util.Random;
 
 public class SecimEkrani extends Screen {
 
+    private KaderiniSecMod modAnaBeyin;
     private Ozellikler.Ozellik secenekA_Avantaj;
     private Ozellikler.Ozellik secenekA_Dezavantaj;
     private Ozellikler.Ozellik secenekB_Avantaj;
     private Ozellikler.Ozellik secenekB_Dezavantaj;
     private Random random = new Random();
 
-    public SecimEkrani(Ozellikler.Ozellik aAv, Ozellikler.Ozellik aDez, Ozellikler.Ozellik bAv, Ozellikler.Ozellik bDez) {
+    public SecimEkrani(KaderiniSecMod beyin, Ozellikler.Ozellik aAv, Ozellikler.Ozellik aDez, Ozellikler.Ozellik bAv, Ozellikler.Ozellik bDez) {
         super(Component.literal("Kaderini Seç!"));
+        this.modAnaBeyin = beyin;
         this.secenekA_Avantaj = aAv;
         this.secenekA_Dezavantaj = aDez;
         this.secenekB_Avantaj = bAv;
@@ -35,7 +37,7 @@ public class SecimEkrani extends Screen {
         int solX = this.width / 2 - butonGenislik - 10;
         int Y = this.height / 2 - 20;
 
-        // 👁️ SEÇENEK A BUTONU
+        // SEÇENEK A BUTONU
         this.addRenderableWidget(Button.builder(
             Component.literal(secenekA_Avantaj == KaderiniSecMod.SURPRIZ_KUTUSU ? "ŞANSINI DENE (A)" : "SEÇENEK A KABUL"), 
             button -> {
@@ -49,7 +51,7 @@ public class SecimEkrani extends Screen {
             .build()
         );
 
-        // 🎲 SEÇENEK B BUTONU
+        // SEÇENEK B BUTONU
         int sagX = this.width / 2 + 10;
         this.addRenderableWidget(Button.builder(
             Component.literal(secenekB_Avantaj == KaderiniSecMod.SURPRIZ_KUTUSU ? "ŞANSINI DENE (B)" : "SEÇENEK B KABUL"), 
@@ -72,7 +74,6 @@ public class SecimEkrani extends Screen {
 
         guiGraphics.drawCenteredString(this.font, "§l§6KADERİNİ SEÇ!", this.width / 2, this.height / 2 - 80, 0xFFFFFF);
 
-        // Sol Taraf Çizimi (A Seçeneği)
         int solX = this.width / 2 - 90;
         if (secenekA_Avantaj == KaderiniSecMod.SURPRIZ_KUTUSU) {
             guiGraphics.drawCenteredString(this.font, "§k§a?? SÜRPRİZ ??", solX, this.height / 2 - 50, 0xFFFFFF);
@@ -82,7 +83,6 @@ public class SecimEkrani extends Screen {
             guiGraphics.drawCenteredString(this.font, "§c🔴 " + secenekA_Dezavantaj.isim, solX, this.height / 2 + 50, 0xFFFFFF);
         }
 
-        // Sağ Taraf Çizimi (B Seçeneği)
         int sagX = this.width / 2 + 90;
         if (secenekB_Avantaj == KaderiniSecMod.SURPRIZ_KUTUSU) {
             guiGraphics.drawCenteredString(this.font, "§k§a?? SÜRPRİZ ??", sagX, this.height / 2 - 50, 0xFFFFFF);
@@ -97,13 +97,16 @@ public class SecimEkrani extends Screen {
         Ozellikler.Ozellik sonAv = avantaj;
         Ozellikler.Ozellik sonDez = dezavantaj;
 
-        // Eğer tıklanan kutu Sürpriz Kutusu ise, tam şu saniyede havuzdan rastgele bir şey çekiyoruz!
+        // Sürpriz kutusu açıldıysa o anlık ana listeden rastgele bir şey çek
         if (avantaj == KaderiniSecMod.SURPRIZ_KUTUSU) {
             sonAv = Ozellikler.AVANTAJLAR.get(random.nextInt(Ozellikler.AVANTAJLAR.size()));
         }
         if (dezavantaj == KaderiniSecMod.SURPRIZ_KUTUSU) {
             sonDez = Ozellikler.DEZAVANTAJLAR.get(random.nextInt(Ozellikler.DEZAVANTAJLAR.size()));
         }
+
+        // Seçilen kartları ana beyindeki "kalanlar" listesinden sildiriyoruz!
+        modAnaBeyin.kartiKullanVeSil(sonAv, sonDez);
 
         oyuncu.removeAllEffects();
 
