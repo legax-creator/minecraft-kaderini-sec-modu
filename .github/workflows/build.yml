@@ -26,5 +26,5 @@ jobs:
         uses: actions/artifacts@v4
         with:
           name: KaderiniSecMod-Jar
-          path: build/libs/*.jar
+          path: build/libs/*.ja
           
