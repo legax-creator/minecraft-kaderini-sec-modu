@@ -18,26 +18,43 @@ jobs:
 
       - name: Fix Missing Gradle Wrapper
         run: |
-          echo "Eksik Gradle motoru kuruluyor..."
-          mkdir -p gradle/wrapper
-          # Resmi Gradle sunucusundan eksik olan wrapper jar dosyasını çeker
-          curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar
-          # Eşlik eden özellikler dosyasını oluşturur
-          echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
-          echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
-          echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
-          echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
-
-      - name: Grant Execute Permission for Gradle
-        run: chmod +x gradlew
+          # Projede settings.gradle dosyasının nerede olduğunu bulur
+          SETTINGS_DIR=$(find . -name "settings.gradle" -o -name "settings.gradle.kts" | head -n 1 | xargs dirname)
+          
+          if [ -z "$SETTINGS_DIR" ] || [ "$SETTINGS_DIR" = "." ]; then
+            echo "settings.gradle ana dizinde veya bulunamadı, varsayılan olarak kök dizine kuruluyor."
+            TARGET_DIR="."
+          else
+            echo "Mod projesi şu alt klasörde bulundu: $SETTINGS_DIR"
+            TARGET_DIR="$SETTINGS_DIR"
+          fi
+          
+          # Bulunan klasörün içine wrapper motorunu kurar
+          mkdir -p "$TARGET_DIR/gradle/wrapper"
+          curl -L -o "$TARGET_DIR/gradle/wrapper/gradle-wrapper.jar" https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar
+          
+          echo "distributionBase=GRADLE_USER_HOME" > "$TARGET_DIR/gradle/wrapper/gradle-wrapper.properties"
+          echo "distributionPath=wrapper/dists" >> "$TARGET_DIR/gradle/wrapper/gradle-wrapper.properties"
+          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip" >> "$TARGET_DIR/gradle/wrapper/gradle-wrapper.properties"
+          echo "zipStoreBase=GRADLE_USER_HOME" >> "$TARGET_DIR/gradle/wrapper/gradle-wrapper.properties"
+          echo "zipStorePath=wrapper/dists" >> "$TARGET_DIR/gradle/wrapper/gradle-wrapper.properties"
+          
+          # Eğer ana dizinde gradlew yoksa oraya da kopyala
+          if [ "$TARGET_DIR" != "." ]; then
+            cp gradlew "$TARGET_DIR/"
+          fi
 
       - name: Run Gradle Build
-        run: ./gradlew build --no-daemon
+        run: |
+          # Ayar dosyasının olduğu klasörü tekrar bulup içine girerek derler
+          SETTINGS_DIR=$(find . -name "settings.gradle" -o -name "settings.gradle.kts" | head -n 1 | xargs dirname)
+          cd "$SETTINGS_DIR"
+          chmod +x gradlew
+          ./gradlew build --no-daemon
 
       - name: Upload Mod Jar Artifact
         uses: actions/upload-artifact@v4
         with:
           name: KaderiniSecMod-Jar
-          path: build/libs/*.jar
+          path: "**/build/libs/*.jar"
           
