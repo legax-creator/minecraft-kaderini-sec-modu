@@ -7,7 +7,6 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.client.Minecraft;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -16,7 +15,7 @@ import java.util.Random;
 public class KaderiniSecMod {
 
     private int tickSayaci = 0;
-    private int hedefTick = 200; // 10 saniye (Test amaçlı)
+    private int hedefTick = 200; // 10 saniye
     private Random random = new Random();
 
     private List<Ozellikler.Ozellik> kullanilmisAvantajlar = new ArrayList<>();
@@ -32,22 +31,16 @@ public class KaderiniSecMod {
     private void setup(final FMLCommonSetupEvent event) {
     }
 
-    // 🖥️ Sadece ve sadece İstemci (Client) tarafındaki oyuncunun dünyasını dinliyoruz
+    // ⏱️ Zamanlayıcı SUNUCU tarafında güvenle sayıyor (Çökme ihtimali sıfır)
     @SubscribeEvent
-    public void onClientTick(TickEvent.ClientTickEvent event) {
-        if (event.phase == TickEvent.Phase.END) {
-            Minecraft mc = Minecraft.getInstance();
-            // Oyuncu dünyada mı ve şu an açık bir arayüz/ekran yok mu kontrolü
-            if (mc.player != null && mc.level != null && mc.screen == null) {
-                tickSayaci++;
+    public void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        if (event.phase == TickEvent.Phase.END && !event.player.level().isClientSide) {
+            tickSayaci++;
 
-                if (tickSayaci >= hedefTick) {
-                    tickSayaci = 0;
-                    hedefTick = random.nextInt(200) + 200; // Bir sonraki ekran 10-20 sn arası
-                    
-                    // Doğrudan render thread üzerinde ekranı tetikle
-                    secimEkraniniTetikle(mc.player);
-                }
+            if (tickSayaci >= hedefTick) {
+                tickSayaci = 0;
+                hedefTick = random.nextInt(200) + 200; 
+                secimEkraniniTetikle(event.player);
             }
         }
     }
@@ -79,10 +72,8 @@ public class KaderiniSecMod {
         final Ozellikler.Ozellik finalBAv = bAv;
         final Ozellikler.Ozellik finalBDez = bDez;
 
-        // İstemci döngüsünde olduğumuz için doğrudan setScreen çağırabiliyoruz
-        Minecraft.getInstance().setScreen(
-            new SecimEkrani(this, finalAAv, finalADez, finalBAv, finalBDez)
-        );
+        // 🔥 Sihirli Dokunuş: Ekranı doğrudan değil, güvenli köprü (Proxy) üzerinden açıyoruz!
+        ClientProxy.ekraniGoster(this, finalAAv, finalADez, finalBAv, finalBDez);
     }
 
     public void kartiKullanVeSil(Ozellikler.Ozellik avantaj, Ozellikler.Ozellik dezavantaj) {
