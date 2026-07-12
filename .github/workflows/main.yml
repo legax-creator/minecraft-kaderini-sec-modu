@@ -16,6 +16,19 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
+      - name: Fix Missing Gradle Wrapper
+        run: |
+          echo "Eksik Gradle motoru kuruluyor..."
+          mkdir -p gradle/wrapper
+          # Resmi Gradle sunucusundan eksik olan wrapper jar dosyasını çeker
+          curl -L -o gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar
+          # Eşlik eden özellikler dosyasını oluşturur
+          echo "distributionBase=GRADLE_USER_HOME" > gradle/wrapper/gradle-wrapper.properties
+          echo "distributionPath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+          echo "distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip" >> gradle/wrapper/gradle-wrapper.properties
+          echo "zipStoreBase=GRADLE_USER_HOME" >> gradle/wrapper/gradle-wrapper.properties
+          echo "zipStorePath=wrapper/dists" >> gradle/wrapper/gradle-wrapper.properties
+
       - name: Grant Execute Permission for Gradle
         run: chmod +x gradlew
 
