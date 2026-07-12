@@ -1,4 +1,3 @@
-
 package com.kaderinisec;
 
 import net.minecraftforge.common.MinecraftForge;
