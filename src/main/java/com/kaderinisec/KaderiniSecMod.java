@@ -7,6 +7,7 @@ import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraft.world.entity.player.Player;
+import net.minecraftforge.fml.DistExecutor;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Random;
@@ -15,7 +16,7 @@ import java.util.Random;
 public class KaderiniSecMod {
 
     private int tickSayaci = 0;
-    private int hedefTick = 200; // 10 saniye
+    private int hedefTick = 200; // Test için 10 saniye
     private Random random = new Random();
 
     private List<Ozellikler.Ozellik> kullanilmisAvantajlar = new ArrayList<>();
@@ -31,9 +32,9 @@ public class KaderiniSecMod {
     private void setup(final FMLCommonSetupEvent event) {
     }
 
-    // ⏱️ Zamanlayıcı SUNUCU tarafında güvenle sayıyor (Çökme ihtimali sıfır)
     @SubscribeEvent
     public void onPlayerTick(TickEvent.PlayerTickEvent event) {
+        // Zamanlayıcı sunucuda güvenle sayıyor
         if (event.phase == TickEvent.Phase.END && !event.player.level().isClientSide) {
             tickSayaci++;
 
@@ -72,8 +73,11 @@ public class KaderiniSecMod {
         final Ozellikler.Ozellik finalBAv = bAv;
         final Ozellikler.Ozellik finalBDez = bDez;
 
-        // 🔥 Sihirli Dokunuş: Ekranı doğrudan değil, güvenli köprü (Proxy) üzerinden açıyoruz!
-        ClientProxy.ekraniGoster(this, finalAAv, finalADez, finalBAv, finalBDez);
+        // 🛡️ İŞTE EKSİK OLAN RESMİ KÖPRÜ: 
+        // Forge'a bu kodun sadece İstemci (Client) tarafında güvenle çalıştırılacağını zorla dikte ediyoruz.
+        DistExecutor.unsafeRunWhenOn(net.minecraftforge.api.distmarker.Dist.CLIENT, () -> () -> {
+            ClientProxy.ekraniGoster(this, finalAAv, finalADez, finalBAv, finalBDez);
+        });
     }
 
     public void kartiKullanVeSil(Ozellikler.Ozellik avantaj, Ozellikler.Ozellik dezavantaj) {
