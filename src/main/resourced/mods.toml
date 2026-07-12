@@ -1,1 +1,28 @@
+modLoader="javafml"
+loaderVersion="[47,)"
+license="MIT"
+
+[[mods]]
+modId="kaderinisec"
+version="1.0.0"
+displayName="Kaderini Sec Modu"
+credits="Fikir ve Tasarim: Sen"
+authors="Sen"
+description='''
+Minecraft 1.20.1 için çılgın bir meydan okuma modu! Her 3 dakikada bir (rastgele bir anda) karşına iki ucu keskin bıçak olan seçim ekranları gelir. 50 avantaj ve 50 dezavantaj kombinasyonuyla kaderini belirle!
+'''
+
+[[dependencies.kaderinisec]]
+modId="minecraft"
+mandatory=true
+versionRange="[1.20.1]"
+ordering="NONE"
+side="BOTH"
+
+[[dependencies.kaderinisec]]
+modId="forge"
+mandatory=true
+versionRange="[47,)"
+ordering="NONE"
+side="BOTH"
 
