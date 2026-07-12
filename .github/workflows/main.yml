@@ -23,7 +23,7 @@ jobs:
         run: ./gradlew build --no-daemon
 
       - name: Upload Mod Jar Artifact
-        uses: actions/artifacts@v3
+        uses: actions/upload-artifact@v3
         with:
           name: KaderiniSecMod-Jar
           path: build/libs/*.jar
